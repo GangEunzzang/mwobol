@@ -77,6 +77,6 @@ project(':mwobol-common') {
     apply plugin: 'java-library'
 
     dependencies {
-        // 최소 의존성 - 나중에 필요시 추가
+        api 'org.springframework.boot:spring-boot-starter-web'
     }
 }
