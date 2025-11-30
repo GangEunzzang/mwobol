@@ -1,0 +1,6 @@
+rootProject.name = 'mwobol-backend'
+
+include 'mwobol-api'
+include 'mwobol-domain'
+include 'mwobol-infra'
+include 'mwobol-common'

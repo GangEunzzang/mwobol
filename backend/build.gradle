@@ -1,0 +1,82 @@
+plugins {
+    id 'org.springframework.boot' version '4.0.0' apply false
+    id 'io.spring.dependency-management' version '1.1.7' apply false
+}
+
+allprojects {
+    group = 'com.mwobol'
+    version = '0.0.1-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'io.spring.dependency-management'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(25)
+        }
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:4.0.0"
+        }
+    }
+
+    dependencies {
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}
+
+// API 모듈 - 진입점 (Spring Boot 애플리케이션)
+project(':mwobol-api') {
+    apply plugin: 'org.springframework.boot'
+
+    dependencies {
+        implementation project(':mwobol-domain')
+        implementation project(':mwobol-common')
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+
+        // H2 메모리 DB (로컬 개발용)
+        runtimeOnly 'com.h2database:h2'
+    }
+}
+
+// Domain 모듈 - 비즈니스 로직
+project(':mwobol-domain') {
+    apply plugin: 'java-library'
+
+    dependencies {
+        api project(':mwobol-infra')
+        api project(':mwobol-common')
+    }
+}
+
+// Infra 모듈 - 외부 연동 (DB, Firebase 등)
+project(':mwobol-infra') {
+    apply plugin: 'java-library'
+
+    dependencies {
+        api project(':mwobol-common')
+    }
+}
+
+// Common 모듈 - 공통 유틸
+project(':mwobol-common') {
+    apply plugin: 'java-library'
+
+    dependencies {
+        // 최소 의존성 - 나중에 필요시 추가
+    }
+}
