@@ -1,6 +1,7 @@
 plugins {
     id 'org.springframework.boot' version '4.0.0' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'nu.studer.jooq' version '9.0' apply false
 }
 
 allprojects {
@@ -32,6 +33,7 @@ subprojects {
         compileOnly 'org.projectlombok:lombok'
         annotationProcessor 'org.projectlombok:lombok'
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     }
 
     test {
@@ -45,30 +47,84 @@ project(':mwobol-api') {
 
     dependencies {
         implementation project(':mwobol-domain')
+        implementation project(':mwobol-infra')
         implementation project(':mwobol-common')
         implementation 'org.springframework.boot:spring-boot-starter-web'
 
-        // H2 메모리 DB (로컬 개발용)
-        runtimeOnly 'com.h2database:h2'
+        // PostgreSQL (Supabase/RDS)
+        runtimeOnly 'org.postgresql:postgresql'
+
+        // H2 (테스트용)
+        testRuntimeOnly 'com.h2database:h2'
     }
 }
 
-// Domain 모듈 - 비즈니스 로직
+// Domain 모듈 - 비즈니스 로직 + 엔티티
 project(':mwobol-domain') {
     apply plugin: 'java-library'
+    apply plugin: 'nu.studer.jooq'
 
     dependencies {
-        api project(':mwobol-infra')
         api project(':mwobol-common')
+        api 'org.springframework.boot:spring-boot-starter-data-jpa'
+        api 'org.jooq:jooq:3.19.28'
+        jooqGenerator 'org.postgresql:postgresql'
+        testImplementation 'org.springframework.boot:spring-boot-data-jpa-test'
+        testRuntimeOnly 'com.h2database:h2'
+    }
+
+    jooq {
+        version = '3.19.28'
+        configurations {
+            main {
+                generateSchemaSourceOnCompilation = false
+                generationTool {
+                    jdbc {
+                        driver = 'org.postgresql.Driver'
+                        url = System.getenv('DB_URL') ?: 'jdbc:postgresql://aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres'
+                        user = System.getenv('DB_USERNAME') ?: 'postgres.wrntrvvvforwfcnsiubj'
+                        password = System.getenv('DB_PASSWORD') ?: ''
+                    }
+                    generator {
+                        name = 'org.jooq.codegen.JavaGenerator'
+                        database {
+                            name = 'org.jooq.meta.postgres.PostgresDatabase'
+                            inputSchema = 'public'
+                            includes = '.*'
+                            excludes = ''
+                        }
+                        generate {
+                            records = true
+                            immutablePojos = true
+                            fluentSetters = true
+                        }
+                        target {
+                            packageName = 'com.mwobol.domain.jooq.generated'
+                            directory = 'src/main/java'
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
-// Infra 모듈 - 외부 연동 (DB, Firebase 등)
+// Infra 모듈 - 외부 연동, Config
 project(':mwobol-infra') {
     apply plugin: 'java-library'
 
     dependencies {
-        api project(':mwobol-common')
+        api project(':mwobol-domain')
+
+        // Spring Boot (for config annotations)
+        implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'org.springframework.boot:spring-boot-autoconfigure'
+
+        // PostgreSQL
+        implementation 'org.postgresql:postgresql'
+
+        // 테스트
+        testRuntimeOnly 'com.h2database:h2'
     }
 }
 
